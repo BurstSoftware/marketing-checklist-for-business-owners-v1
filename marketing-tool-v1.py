@@ -10,13 +10,13 @@ from io import BytesIO
 
 # ====================== PAGE CONFIG ======================
 st.set_page_config(
-    page_title="Marketing Tool v1 - Business Metrics Tracker",
-    page_icon="📊",
+    page_title="Marketing Dashboard v1",
+    page_icon="📈",
     layout="wide"
 )
 
-st.title("📊 Business Metrics Tracker")
-st.caption("App Version: marketing-tool-v1 | Python 3.14 Compatible")
+st.title("📈 Marketing Dashboard")
+st.caption("Marketing Tool v1 • Track campaigns, revenue & performance")
 
 # ====================== SESSION STATE ======================
 if "metrics_df" not in st.session_state:
@@ -24,39 +24,113 @@ if "metrics_df" not in st.session_state:
         columns=["Date", "Metric", "Value", "Notes"]
     )
 
+if "company_name" not in st.session_state:
+    st.session_state.company_name = ""
+
 # ====================== SIDEBAR NAVIGATION ======================
 st.sidebar.title("🧭 Navigation")
 page = st.sidebar.radio(
     "Go to page",
-    ["🏠 Home", "📝 Data Input", "📈 Dashboard", "📤 Export"],
+    ["🏠 Marketing Dashboard", "📝 Data Input", "📈 Analytics", "📤 Export"],
     index=0
 )
 
-# ====================== HOME PAGE ======================
-if page == "🏠 Home":
-    st.header("Welcome to your Business Metrics Tracker")
-    st.write("Track marketing campaigns, revenue, user engagement, and other key business metrics.")
+# ====================== MARKETING DASHBOARD (FRONT PAGE) ======================
+if page == "🏠 Marketing Dashboard":
+    st.header("Marketing Dashboard")
 
-    if st.session_state.metrics_df.empty:
-        st.info("No data yet. Go to **Data Input** to start adding entries.")
+    # === Company Name Setup ===
+    if not st.session_state.company_name:
+        st.subheader("👋 Welcome! Let's set up your dashboard")
+        with st.form("company_setup"):
+            company = st.text_input(
+                "Company Name",
+                placeholder="e.g. Acme Digital, Nova Labs, etc.",
+                help="This will appear on your dashboard and reports"
+            )
+            if st.form_submit_button("Save Company Name", use_container_width=True):
+                if company.strip():
+                    st.session_state.company_name = company.strip()
+                    st.success(f"Company set to **{st.session_state.company_name}**")
+                    st.rerun()
+                else:
+                    st.error("Please enter a company name.")
     else:
-        st.subheader("Latest 5 Entries")
-        st.dataframe(st.session_state.metrics_df.tail(5), use_container_width=True)
+        # Show company name + option to change it
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.subheader(f"📊 {st.session_state.company_name}")
+        with col2:
+            if st.button("✏️ Change Name", use_container_width=True):
+                st.session_state.company_name = ""
+                st.rerun()
+
+        st.divider()
+
+        # === Dashboard Content ===
+        if st.session_state.metrics_df.empty:
+            st.info("No data yet. Go to **Data Input** to start adding marketing metrics.")
+        else:
+            df = st.session_state.metrics_df.copy()
+            df["Date"] = pd.to_datetime(df["Date"])
+
+            # --- Marketing KPIs ---
+            st.subheader("Key Marketing Metrics")
+
+            def get_metric_total(metric_name):
+                mask = df["Metric"].str.lower() == metric_name.lower()
+                return df.loc[mask, "Value"].sum()
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            revenue = get_metric_total("Revenue")
+            clicks = get_metric_total("Clicks")
+            impressions = get_metric_total("Impressions")
+            conversions = get_metric_total("Conversions")
+
+            col1.metric("Total Revenue", f"${revenue:,.2f}" if revenue > 0 else "—")
+            col2.metric("Total Clicks", f"{int(clicks):,}" if clicks > 0 else "—")
+            col3.metric("Total Impressions", f"{int(impressions):,}" if impressions > 0 else "—")
+            col4.metric("Total Conversions", f"{int(conversions):,}" if conversions > 0 else "—")
+
+            st.divider()
+
+            # --- Overall Summary ---
+            st.subheader("Metrics Overview")
+            summary = df.groupby("Metric")["Value"].agg(["sum", "mean", "count"]).reset_index()
+            summary.columns = ["Metric", "Total", "Average", "Entries"]
+            st.dataframe(summary, use_container_width=True)
+
+            st.divider()
+
+            # --- Quick Trend Chart ---
+            st.subheader("Quick Trend Visualization")
+            available_metrics = df["Metric"].unique().tolist()
+            selected_metric = st.selectbox("Select metric to visualize", available_metrics, key="main_dashboard_metric")
+
+            metric_df = df[df["Metric"] == selected_metric].sort_values("Date")
+            st.line_chart(
+                metric_df.set_index("Date")["Value"],
+                use_container_width=True,
+                height=380
+            )
+
+            st.caption("💡 Add or edit more detailed entries in the **Data Input** page.")
 
 # ====================== DATA INPUT PAGE ======================
 elif page == "📝 Data Input":
-    st.header("📝 Add New Metric Entry")
+    st.header("📝 Add & Manage Marketing Data")
 
     with st.form("add_entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
-        
+
         with col1:
             input_date = st.date_input("Date", value=date.today())
             metric = st.text_input(
                 "Metric Name",
-                placeholder="e.g. Revenue, Clicks, Impressions, Conversions, Users"
+                placeholder="e.g. Revenue, Clicks, Impressions, Conversions, Leads, CTR"
             )
-        
+
         with col2:
             value = st.number_input("Value", min_value=0.0, step=0.01, format="%.2f")
             notes = st.text_area("Notes (optional)", height=80)
@@ -96,7 +170,7 @@ elif page == "📝 Data Input":
             if st.button("💾 Save Changes", use_container_width=True):
                 st.session_state.metrics_df = edited_df.copy()
                 st.success("Changes saved successfully!")
-        
+
         with col2:
             if st.button("🗑️ Clear All Data", type="secondary", use_container_width=True):
                 st.session_state.metrics_df = pd.DataFrame(
@@ -109,7 +183,7 @@ elif page == "📝 Data Input":
 
     # Sample data
     st.divider()
-    if st.button("🚀 Load Sample Data (Demo)", use_container_width=True):
+    if st.button("🚀 Load Sample Marketing Data", use_container_width=True):
         sample = pd.DataFrame({
             "Date": pd.to_datetime(["2026-07-01", "2026-07-05", "2026-07-10", "2026-07-15", "2026-07-18"]),
             "Metric": ["Revenue", "Clicks", "Impressions", "Conversions", "Revenue"],
@@ -119,12 +193,12 @@ elif page == "📝 Data Input":
         st.session_state.metrics_df = pd.concat(
             [st.session_state.metrics_df, sample], ignore_index=True
         )
-        st.success("Sample data loaded! Go to Dashboard or Export.")
+        st.success("Sample marketing data loaded!")
         st.rerun()
 
-# ====================== DASHBOARD PAGE ======================
-elif page == "📈 Dashboard":
-    st.header("📈 Metrics Dashboard")
+# ====================== ANALYTICS PAGE ======================
+elif page == "📈 Analytics":
+    st.header("📈 Detailed Analytics")
 
     if st.session_state.metrics_df.empty:
         st.warning("No data available. Please add entries in the Data Input page.")
@@ -174,27 +248,26 @@ elif page == "📤 Export":
 
         st.divider()
 
-        # === CSV Export ===
+        # CSV Export
         csv_data = df.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="📥 Download as CSV",
             data=csv_data,
-            file_name="business_metrics.csv",
+            file_name="marketing_metrics.csv",
             mime="text/csv",
             use_container_width=True
         )
 
         st.divider()
 
-        # === Copy to Clipboard ===
+        # Copy to Clipboard
         st.subheader("📋 Copy to Clipboard")
         csv_text = df.to_csv(index=False)
         st.code(csv_text, language="csv")
-        st.caption("Click the copy icon in the top-right corner of the code block.")
 
         st.divider()
 
-        # === PDF Export with ReportLab ===
+        # PDF Export
         st.subheader("📄 Download as PDF")
 
         def create_pdf(dataframe):
@@ -203,15 +276,15 @@ elif page == "📤 Export":
             styles = getSampleStyleSheet()
             elements = []
 
+            company = st.session_state.get("company_name", "Your Company")
+
             # Title
-            elements.append(Paragraph("Business Metrics Tracker Report", styles["Heading1"]))
+            elements.append(Paragraph(f"{company} - Marketing Report", styles["Heading1"]))
             elements.append(Paragraph(f"Generated on: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}", styles["Normal"]))
             elements.append(Spacer(1, 20))
 
-            # Table data
+            # Table
             table_data = [["Date", "Metric", "Value", "Notes"]] + dataframe.values.tolist()
-
-            # Create table
             table = Table(table_data)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1f77b4")),
@@ -236,11 +309,11 @@ elif page == "📤 Export":
             st.download_button(
                 label="📥 Download PDF Now",
                 data=pdf_buffer,
-                file_name="business_metrics_report.pdf",
+                file_name="marketing_report.pdf",
                 mime="application/pdf",
                 use_container_width=True
             )
 
 # ====================== FOOTER ======================
 st.sidebar.divider()
-st.sidebar.caption("Built for Business Metrics Tracking • Python 3.14 Ready")
+st.sidebar.caption("Built for Marketing Teams • Python 3.14 Ready")
