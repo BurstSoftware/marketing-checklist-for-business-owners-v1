@@ -1,6 +1,12 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
 
 # ====================== PAGE CONFIG ======================
 st.set_page_config(
@@ -10,7 +16,7 @@ st.set_page_config(
 )
 
 st.title("📊 Business Metrics Tracker")
-st.caption("App Version: marketing-tool-v1 | Built with Streamlit + Pandas")
+st.caption("App Version: marketing-tool-v1 | Python 3.14 Compatible")
 
 # ====================== SESSION STATE ======================
 if "metrics_df" not in st.session_state:
@@ -34,7 +40,7 @@ if page == "🏠 Home":
     if st.session_state.metrics_df.empty:
         st.info("No data yet. Go to **Data Input** to start adding entries.")
     else:
-        st.subheader("Latest Entries")
+        st.subheader("Latest 5 Entries")
         st.dataframe(st.session_state.metrics_df.tail(5), use_container_width=True)
 
 # ====================== DATA INPUT PAGE ======================
@@ -58,7 +64,7 @@ elif page == "📝 Data Input":
         submitted = st.form_submit_button("➕ Add Entry", use_container_width=True)
 
         if submitted:
-            if metric.strip() == "":
+            if not metric.strip():
                 st.error("Metric name cannot be empty!")
             else:
                 new_row = pd.DataFrame({
@@ -75,7 +81,7 @@ elif page == "📝 Data Input":
     st.divider()
 
     # Edit existing data
-    st.subheader("Edit or Manage Existing Data")
+    st.subheader("✏️ Edit or Manage Existing Data")
 
     if not st.session_state.metrics_df.empty:
         edited_df = st.data_editor(
@@ -85,13 +91,13 @@ elif page == "📝 Data Input":
             key="data_editor"
         )
 
-        col_save, col_clear = st.columns(2)
-        with col_save:
+        col1, col2 = st.columns(2)
+        with col1:
             if st.button("💾 Save Changes", use_container_width=True):
                 st.session_state.metrics_df = edited_df.copy()
-                st.success("Changes saved!")
-
-        with col_clear:
+                st.success("Changes saved successfully!")
+        
+        with col2:
             if st.button("🗑️ Clear All Data", type="secondary", use_container_width=True):
                 st.session_state.metrics_df = pd.DataFrame(
                     columns=["Date", "Metric", "Value", "Notes"]
@@ -101,9 +107,9 @@ elif page == "📝 Data Input":
     else:
         st.info("No data to edit yet.")
 
-    # Demo data button
+    # Sample data
     st.divider()
-    if st.button("🚀 Load Sample Data (for testing)", use_container_width=True):
+    if st.button("🚀 Load Sample Data (Demo)", use_container_width=True):
         sample = pd.DataFrame({
             "Date": pd.to_datetime(["2026-07-01", "2026-07-05", "2026-07-10", "2026-07-15", "2026-07-18"]),
             "Metric": ["Revenue", "Clicks", "Impressions", "Conversions", "Revenue"],
@@ -113,7 +119,7 @@ elif page == "📝 Data Input":
         st.session_state.metrics_df = pd.concat(
             [st.session_state.metrics_df, sample], ignore_index=True
         )
-        st.success("Sample data loaded! Check the Dashboard.")
+        st.success("Sample data loaded! Go to Dashboard or Export.")
         st.rerun()
 
 # ====================== DASHBOARD PAGE ======================
@@ -126,24 +132,17 @@ elif page == "📈 Dashboard":
         df = st.session_state.metrics_df.copy()
         df["Date"] = pd.to_datetime(df["Date"])
 
-        # Summary metrics
+        # Summary cards
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Entries", len(df))
         col2.metric("Unique Metrics", df["Metric"].nunique())
-        col3.metric(
-            "Date Range",
-            f"{df['Date'].min().date()} → {df['Date'].max().date()}"
-        )
+        col3.metric("Date Range", f"{df['Date'].min().date()} → {df['Date'].max().date()}")
 
         st.divider()
 
-        # Grouped summary
+        # Summary table
         st.subheader("Metrics Summary")
-        summary = (
-            df.groupby("Metric")["Value"]
-            .agg(["sum", "mean", "count"])
-            .reset_index()
-        )
+        summary = df.groupby("Metric")["Value"].agg(["sum", "mean", "count"]).reset_index()
         summary.columns = ["Metric", "Total", "Average", "Entries"]
         st.dataframe(summary, use_container_width=True)
 
@@ -152,7 +151,7 @@ elif page == "📈 Dashboard":
         # Visualization
         st.subheader("Trend Visualization")
         available_metrics = df["Metric"].unique().tolist()
-        selected_metric = st.selectbox("Select a metric to visualize", available_metrics)
+        selected_metric = st.selectbox("Select metric to plot", available_metrics)
 
         metric_df = df[df["Metric"] == selected_metric].sort_values("Date")
         st.line_chart(
@@ -166,7 +165,7 @@ elif page == "📤 Export":
     st.header("📤 Export Your Data")
 
     if st.session_state.metrics_df.empty:
-        st.info("No data to export yet.")
+        st.info("No data to export yet. Add some entries first.")
     else:
         df = st.session_state.metrics_df.copy()
 
@@ -175,7 +174,7 @@ elif page == "📤 Export":
 
         st.divider()
 
-        # CSV Export
+        # === CSV Export ===
         csv_data = df.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="📥 Download as CSV",
@@ -187,53 +186,61 @@ elif page == "📤 Export":
 
         st.divider()
 
-        # Copy to Clipboard (using code block with built-in copy button)
+        # === Copy to Clipboard ===
         st.subheader("📋 Copy to Clipboard")
         csv_text = df.to_csv(index=False)
         st.code(csv_text, language="csv")
-        st.caption("Click the **copy icon** in the top-right of the code block above.")
+        st.caption("Click the copy icon in the top-right corner of the code block.")
 
         st.divider()
 
-        # PDF via HTML (no extra libraries needed)
-        st.subheader("📄 Download as PDF (via HTML)")
+        # === PDF Export with ReportLab ===
+        st.subheader("📄 Download as PDF")
 
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Business Metrics Report</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; color: #333; }}
-                h1 {{ color: #1f77b4; }}
-                table {{ border-collapse: collapse; width: 100%; margin-top: 20px; }}
-                th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
-                th {{ background-color: #1f77b4; color: white; }}
-                tr:nth-child(even) {{ background-color: #f9f9f9; }}
-                .header {{ margin-bottom: 30px; }}
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>📊 Business Metrics Tracker Report</h1>
-                <p><strong>App Version:</strong> marketing-tool-v1</p>
-                <p><strong>Generated on:</strong> {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}</p>
-            </div>
-            <h2>Full Data</h2>
-            {df.to_html(index=False, classes='dataframe')}
-        </body>
-        </html>
-        """
+        def create_pdf(dataframe):
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=letter)
+            styles = getSampleStyleSheet()
+            elements = []
 
-        st.download_button(
-            label="📄 Download HTML Report (then Print → Save as PDF)",
-            data=html_content.encode("utf-8"),
-            file_name="business_metrics_report.html",
-            mime="text/html",
-            use_container_width=True
-        )
-        st.caption("Open the downloaded HTML file in any browser → Press **Ctrl + P** (or Cmd + P) → Choose **Save as PDF**.")
+            # Title
+            elements.append(Paragraph("Business Metrics Tracker Report", styles["Heading1"]))
+            elements.append(Paragraph(f"Generated on: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}", styles["Normal"]))
+            elements.append(Spacer(1, 20))
+
+            # Table data
+            table_data = [["Date", "Metric", "Value", "Notes"]] + dataframe.values.tolist()
+
+            # Create table
+            table = Table(table_data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1f77b4")),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            elements.append(table)
+
+            doc.build(elements)
+            buffer.seek(0)
+            return buffer
+
+        if st.button("Generate PDF", use_container_width=True):
+            pdf_buffer = create_pdf(df)
+            st.download_button(
+                label="📥 Download PDF Now",
+                data=pdf_buffer,
+                file_name="business_metrics_report.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
 
 # ====================== FOOTER ======================
 st.sidebar.divider()
-st.sidebar.caption("Built for Business Metrics Tracking")
+st.sidebar.caption("Built for Business Metrics Tracking • Python 3.14 Ready")
