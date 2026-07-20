@@ -102,14 +102,12 @@ if "swot_df" not in st.session_state:
         "Cost of Goods Sold", "Cost of Dedicated Staff", "Total Customer Profit", "Customer Revenue"
     ])
 
-# NEW: Lead Tracking
 if "leads_df" not in st.session_state:
     st.session_state.leads_df = pd.DataFrame(columns=[
         "Lead Name", "Company", "Source", "Inquiry Date", "Proposal Date",
         "Project Go Ahead Date", "Status", "Notes"
     ])
 
-# NEW: Lead Generation Activities
 if "lead_activities_df" not in st.session_state:
     st.session_state.lead_activities_df = pd.DataFrame(columns=[
         "Activity", "Budget", "Actual Spend", "Notes", "Date Added"
@@ -129,8 +127,8 @@ page = st.sidebar.radio(
         "❤️ Affinity",
         "📍 Location",
         "🧑‍💼 Customer Type & Roles",
-        "📋 Lead Tracking",                    # NEW
-        "📣 Lead Generation Activities",       # NEW
+        "📋 Lead Tracking",
+        "📣 Lead Generation Activities",
         "🛡️ SWOT Analysis",
         "🎯 Strategies",
         "📈 Analytics",
@@ -170,12 +168,11 @@ if page == "🏠 Marketing Dashboard":
     col4.metric("Metrics", len(st.session_state.metrics_df))
     col5.metric("Strategies", len(st.session_state.strategies_df))
     col6.metric("Classifications", len(st.session_state.customer_type_df))
-    col7.metric("Leads", len(st.session_state.leads_df))           # NEW
-    col8.metric("Activities", len(st.session_state.lead_activities_df))  # NEW
+    col7.metric("Leads", len(st.session_state.leads_df))
+    col8.metric("Activities", len(st.session_state.lead_activities_df))
 
-# ====================== DATA INPUT (unchanged) ======================
+# ====================== DATA INPUT ======================
 elif page == "📝 Data Input":
-    # ... (keep original Data Input code) ...
     st.header("📝 Add Marketing Metrics")
     with st.form("add_entry_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -203,9 +200,8 @@ elif page == "📝 Data Input":
             if auto_save:
                 save_all_data()
 
-# ====================== PROFILE (Single Column - as before) ======================
+# ====================== PROFILE (Single Column) ======================
 elif page == "👤 Profile":
-    # ... (keep the single-column version I gave you earlier) ...
     st.header("👤 Customer Profile Data")
     st.caption("Build detailed customer personas for targeted marketing")
 
@@ -260,27 +256,173 @@ elif page == "👤 Profile":
                 st.session_state.profile_df = pd.DataFrame(columns=st.session_state.profile_df.columns)
                 st.rerun()
     else:
-        st.info("No profiles yet.")
+        st.info("No profiles yet. Use the form above.")
 
-# ====================== AFFINITY, LOCATION, CUSTOMER TYPE (Single Column versions) ======================
-# (Keep the single-column versions from previous response for these three pages)
-
+# ====================== AFFINITY (Single Column) ======================
 elif page == "❤️ Affinity":
-    # Paste the single-column Affinity code from my previous response here
     st.header("❤️ Customer Affinity & Affiliations")
-    # ... (full single-column form + table as before)
+    st.caption("Map schools, churches, clubs, and employers for hyper-targeted outreach")
 
+    with st.form("add_affinity_form", clear_on_submit=True):
+        st.subheader("➕ Add Affinity Data")
+        customer_name_aff = st.text_input("Customer / Persona Name*", placeholder="e.g., Sarah Thompson")
+
+        grade_schools = st.text_input("Grade Schools", placeholder="e.g., Lincoln Elementary")
+        high_schools = st.text_input("High Schools", placeholder="e.g., Roosevelt High")
+        colleges = st.text_input("Colleges", placeholder="e.g., University of Michigan")
+        advanced_degrees = st.text_input("Advanced Degree Programs", placeholder="e.g., MBA - Harvard")
+        church = st.text_input("Church Affiliations", placeholder="e.g., First Baptist Church")
+        fraternal = st.text_input("Fraternal Affiliations", placeholder="e.g., Kappa Sigma")
+        service = st.text_input("Service Affiliations", placeholder="e.g., Rotary Club")
+        clubs = st.text_input("Clubs", placeholder="e.g., Book Club, Golf Club")
+        community = st.text_input("Community Groups", placeholder="e.g., PTA")
+        recreational = st.text_input("Recreational Teams", placeholder="e.g., YMCA Soccer")
+        employers = st.text_input("Current / Past Employers", placeholder="e.g., Google")
+
+        if st.form_submit_button("➕ Add Affinity Record", use_container_width=True):
+            if customer_name_aff.strip():
+                new_row = pd.DataFrame([{
+                    "Customer": customer_name_aff.strip(),
+                    "Grade Schools": grade_schools.strip(), "High Schools": high_schools.strip(),
+                    "Colleges": colleges.strip(), "Advanced Degree Programs": advanced_degrees.strip(),
+                    "Church Affiliations": church.strip(), "Fraternal Affiliations": fraternal.strip(),
+                    "Service Affiliations": service.strip(), "Clubs": clubs.strip(),
+                    "Community Groups": community.strip(), "Recreational Teams": recreational.strip(),
+                    "Employers": employers.strip()
+                }])
+                st.session_state.affinity_df = pd.concat([st.session_state.affinity_df, new_row], ignore_index=True)
+                st.success(f"Affinity data for **{customer_name_aff}** added!")
+                if auto_save:
+                    save_all_data()
+            else:
+                st.warning("Customer/Persona Name is required.")
+
+    st.divider()
+    st.subheader("📋 All Affinity Records")
+    if not st.session_state.affinity_df.empty:
+        edited_affinity = st.data_editor(st.session_state.affinity_df, use_container_width=True, num_rows="dynamic", key="affinity_editor")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save Affinity Changes", use_container_width=True):
+                st.session_state.affinity_df = edited_affinity.copy()
+                st.success("Affinity records updated!")
+                if auto_save:
+                    save_all_data()
+        with col2:
+            if st.button("🗑️ Clear All Affinity", type="secondary"):
+                st.session_state.affinity_df = pd.DataFrame(columns=st.session_state.affinity_df.columns)
+                st.rerun()
+    else:
+        st.info("No affinity records yet.")
+
+# ====================== LOCATION (Single Column) ======================
 elif page == "📍 Location":
-    # Paste the single-column Location code from previous response
     st.header("📍 Customer Location & Classification")
-    # ... (full single-column form + table)
+    st.caption("Geographic and business classification for localized campaigns")
 
+    with st.form("add_location_form", clear_on_submit=True):
+        st.subheader("➕ Add Location Data")
+        customer_name_loc = st.text_input("Customer / Persona Name*", placeholder="e.g., Sarah Thompson")
+
+        block = st.text_input("Block / Street", placeholder="e.g., 1234 Maple Ave")
+        carrier_route = st.text_input("Carrier Route", placeholder="e.g., C012")
+        zip_code = st.text_input("Zip Code", placeholder="e.g., 90210")
+        neighborhood = st.text_input("Neighborhood", placeholder="e.g., Beverly Hills")
+        city = st.text_input("City", placeholder="e.g., Los Angeles")
+        metro_area = st.text_input("Metro Area", placeholder="e.g., Greater LA")
+        state = st.text_input("State", placeholder="e.g., CA")
+        county = st.text_input("County", placeholder="e.g., Los Angeles County")
+        country = st.text_input("Country", value="USA")
+        sic_code = st.text_input("SIC Code (if business)", placeholder="e.g., 8742")
+        business_type = st.text_input("Business Type", placeholder="e.g., Retail")
+        customer_type = st.selectbox("Customer Type", ["Consumer", "Business", "B2B", "B2C", "Non-profit"])
+
+        if st.form_submit_button("➕ Add Location Record", use_container_width=True):
+            if customer_name_loc.strip():
+                new_row = pd.DataFrame([{
+                    "Customer": customer_name_loc.strip(), "Block": block.strip(),
+                    "Carrier Route": carrier_route.strip(), "Zip Code": zip_code.strip(),
+                    "Neighborhood": neighborhood.strip(), "City": city.strip(),
+                    "Metro Area": metro_area.strip(), "State": state.strip(),
+                    "County": county.strip(), "Country": country,
+                    "SIC Code": sic_code.strip(), "Business Type": business_type.strip(),
+                    "Customer Type": customer_type
+                }])
+                st.session_state.location_df = pd.concat([st.session_state.location_df, new_row], ignore_index=True)
+                st.success(f"Location data for **{customer_name_loc}** added!")
+                if auto_save:
+                    save_all_data()
+            else:
+                st.warning("Customer/Persona Name is required.")
+
+    st.divider()
+    st.subheader("📋 All Location Records")
+    if not st.session_state.location_df.empty:
+        edited_location = st.data_editor(st.session_state.location_df, use_container_width=True, num_rows="dynamic", key="location_editor")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save Location Changes", use_container_width=True):
+                st.session_state.location_df = edited_location.copy()
+                st.success("Location records updated!")
+                if auto_save:
+                    save_all_data()
+        with col2:
+            if st.button("🗑️ Clear All Locations", type="secondary"):
+                st.session_state.location_df = pd.DataFrame(columns=st.session_state.location_df.columns)
+                st.rerun()
+    else:
+        st.info("No location records yet.")
+
+# ====================== CUSTOMER TYPE & ROLES (Single Column) ======================
 elif page == "🧑‍💼 Customer Type & Roles":
-    # Paste the single-column Customer Type code from previous response
     st.header("🧑‍💼 Customer Type & Roles")
-    # ... (full single-column form + table)
+    st.caption("Classify customers as Consumer vs Business and identify key roles")
 
-# ====================== NEW: LEAD TRACKING ======================
+    customer_type_options = ["Consumer", "Business", "B2B", "B2C", "Non-profit", "Government"]
+    role_options = ["Decision Maker", "Gatekeeper", "Influencer", "Buyer", "End User", "Other"]
+
+    with st.form("add_customer_type_form", clear_on_submit=True):
+        st.subheader("➕ Add / Update Customer Classification")
+        customer_name_ct = st.text_input("Customer / Persona Name*", placeholder="e.g., Sarah Thompson or Acme Corp")
+
+        cust_type = st.selectbox("Customer Type", customer_type_options)
+        role = st.selectbox("Role", role_options)
+        notes = st.text_area("Notes (optional)", height=80, placeholder="e.g., Primary decision maker for IT purchases")
+
+        if st.form_submit_button("➕ Add Classification", use_container_width=True):
+            if customer_name_ct.strip():
+                new_row = pd.DataFrame([{
+                    "Customer": customer_name_ct.strip(),
+                    "Customer Type": cust_type,
+                    "Role": role,
+                    "Notes": notes.strip()
+                }])
+                st.session_state.customer_type_df = pd.concat([st.session_state.customer_type_df, new_row], ignore_index=True)
+                st.success(f"Classification added for **{customer_name_ct}**")
+                if auto_save:
+                    save_all_data()
+            else:
+                st.warning("Customer/Persona Name is required.")
+
+    st.divider()
+    st.subheader("📋 All Customer Classifications")
+    if not st.session_state.customer_type_df.empty:
+        edited_ct = st.data_editor(st.session_state.customer_type_df, use_container_width=True, num_rows="dynamic", key="ct_editor")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save Changes", use_container_width=True):
+                st.session_state.customer_type_df = edited_ct.copy()
+                st.success("Classifications updated!")
+                if auto_save:
+                    save_all_data()
+        with col2:
+            if st.button("🗑️ Clear All Classifications", type="secondary"):
+                st.session_state.customer_type_df = pd.DataFrame(columns=st.session_state.customer_type_df.columns)
+                st.rerun()
+    else:
+        st.info("No classifications yet. Use the form above.")
+
+# ====================== LEAD TRACKING ======================
 elif page == "📋 Lead Tracking":
     st.header("📋 Lead Tracking")
     st.caption("Track leads from inquiry through project go-ahead")
@@ -290,7 +432,7 @@ elif page == "📋 Lead Tracking":
         lead_name = st.text_input("Lead Name / Contact*", placeholder="e.g., John Smith")
         company = st.text_input("Company", placeholder="e.g., Acme Corp")
         source = st.text_input("Source", placeholder="e.g., Website, Referral, Trade Show, Cold Call")
-        
+
         col1, col2, col3 = st.columns(3)
         with col1:
             inquiry_date = st.date_input("Inquiry Date", value=date.today())
@@ -309,8 +451,8 @@ elif page == "📋 Lead Tracking":
                     "Company": company.strip(),
                     "Source": source.strip(),
                     "Inquiry Date": inquiry_date,
-                    "Proposal Date": proposal_date if proposal_date else "",
-                    "Project Go Ahead Date": go_ahead_date if go_ahead_date else "",
+                    "Proposal Date": str(proposal_date) if proposal_date else "",
+                    "Project Go Ahead Date": str(go_ahead_date) if go_ahead_date else "",
                     "Status": status,
                     "Notes": notes.strip()
                 }])
@@ -324,9 +466,7 @@ elif page == "📋 Lead Tracking":
     st.divider()
     st.subheader("📋 All Leads")
     if not st.session_state.leads_df.empty:
-        edited_leads = st.data_editor(
-            st.session_state.leads_df, use_container_width=True, num_rows="dynamic", key="leads_editor"
-        )
+        edited_leads = st.data_editor(st.session_state.leads_df, use_container_width=True, num_rows="dynamic", key="leads_editor")
         col1, col2 = st.columns(2)
         with col1:
             if st.button("💾 Save Lead Changes", use_container_width=True):
@@ -341,7 +481,7 @@ elif page == "📋 Lead Tracking":
     else:
         st.info("No leads tracked yet. Use the form above.")
 
-# ====================== NEW: LEAD GENERATION ACTIVITIES ======================
+# ====================== LEAD GENERATION ACTIVITIES ======================
 elif page == "📣 Lead Generation Activities":
     st.header("📣 Lead Generation Activities")
     st.caption("Track budget and spend across all lead generation channels")
@@ -370,9 +510,7 @@ elif page == "📣 Lead Generation Activities":
                 "Notes": notes.strip(),
                 "Date Added": pd.Timestamp.now().strftime("%Y-%m-%d")
             }])
-            st.session_state.lead_activities_df = pd.concat(
-                [st.session_state.lead_activities_df, new_row], ignore_index=True
-            )
+            st.session_state.lead_activities_df = pd.concat([st.session_state.lead_activities_df, new_row], ignore_index=True)
             st.success(f"Activity **{activity}** recorded!")
             if auto_save:
                 save_all_data()
@@ -380,9 +518,7 @@ elif page == "📣 Lead Generation Activities":
     st.divider()
     st.subheader("📋 All Lead Generation Activities")
     if not st.session_state.lead_activities_df.empty:
-        edited_acts = st.data_editor(
-            st.session_state.lead_activities_df, use_container_width=True, num_rows="dynamic", key="activities_editor"
-        )
+        edited_acts = st.data_editor(st.session_state.lead_activities_df, use_container_width=True, num_rows="dynamic", key="activities_editor")
         col1, col2 = st.columns(2)
         with col1:
             if st.button("💾 Save Activity Changes", use_container_width=True):
@@ -395,7 +531,6 @@ elif page == "📣 Lead Generation Activities":
                 st.session_state.lead_activities_df = pd.DataFrame(columns=st.session_state.lead_activities_df.columns)
                 st.rerun()
 
-        # Quick summary
         total_budget = st.session_state.lead_activities_df["Budget"].sum()
         total_actual = st.session_state.lead_activities_df["Actual Spend"].sum()
         st.metric("Total Budget", f"${total_budget:,.2f}")
@@ -405,24 +540,179 @@ elif page == "📣 Lead Generation Activities":
     else:
         st.info("No activities tracked yet. Use the form above to start logging spend.")
 
-# ====================== SWOT, STRATEGIES, ANALYTICS, EXPORT (keep as before) ======================
+# ====================== SWOT ANALYSIS ======================
 elif page == "🛡️ SWOT Analysis":
-    # ... (keep the full SWOT page from previous response)
+    st.header("🛡️ SWOT Analysis & Competitor Intelligence")
+    st.caption("Compare your company vs competitors with structured SWOT + key financial metrics")
 
+    common_mistakes = [
+        "Thinking marketing is advertising", "Lack of patience", "Fear of failure",
+        "Diligent follow through", "Throwing money at problems that don't exist",
+        "Resisting the use of a marketing plan", "Viewing marketing as a miracle cure",
+        "Putting all your marketing eggs in one basket", "Doing it all in house",
+        "Say one thing one day, say something different the next"
+    ]
+
+    with st.form("add_swot_form", clear_on_submit=True):
+        st.subheader("➕ Add Competitor SWOT Entry")
+        your_company = st.text_input("Your Company Name", value=st.session_state.company_name or "")
+        competitor = st.text_input("Competitor Name*", placeholder="e.g., Acme Corp")
+
+        strengths = st.text_area("Strengths", height=100, placeholder="What does this competitor do well?")
+        weaknesses = st.text_area("Weaknesses", height=100, placeholder="Where does this competitor struggle?")
+        opportunities = st.text_area("Opportunities", height=100, placeholder="Market gaps or trends...")
+        threats = st.text_area("Threats", height=100, placeholder="Risks or challenges...")
+
+        avoid_mistakes = st.multiselect("Avoid Common Mistakes (select all that apply)", common_mistakes, default=[])
+
+        st.divider()
+        st.subheader("Financial Metrics")
+        total_sales = st.number_input("Total Sales", min_value=0.0, step=1000.0, format="%.2f")
+        gross_profit = st.number_input("Total Gross Profit", min_value=0.0, step=1000.0, format="%.2f")
+        net_profit = st.number_input("Total Net Profit", min_value=0.0, step=1000.0, format="%.2f")
+        cogs = st.number_input("Cost of Goods Sold", min_value=0.0, step=1000.0, format="%.2f")
+        staff_cost = st.number_input("Cost of Dedicated Staff", min_value=0.0, step=1000.0, format="%.2f")
+        customer_profit = st.number_input("Total Customer Profit", min_value=0.0, step=1000.0, format="%.2f")
+        customer_revenue = st.number_input("Customer Revenue", min_value=0.0, step=1000.0, format="%.2f")
+
+        if st.form_submit_button("➕ Add SWOT Entry", use_container_width=True):
+            if competitor.strip():
+                new_row = pd.DataFrame([{
+                    "Your Company": your_company.strip() or st.session_state.company_name,
+                    "Competitor": competitor.strip(),
+                    "Strengths": strengths.strip(), "Weaknesses": weaknesses.strip(),
+                    "Opportunities": opportunities.strip(), "Threats": threats.strip(),
+                    "Avoid Common Mistakes": ", ".join(avoid_mistakes),
+                    "Total Sales": total_sales, "Total Gross Profit": gross_profit,
+                    "Total Net Profit": net_profit, "Cost of Goods Sold": cogs,
+                    "Cost of Dedicated Staff": staff_cost,
+                    "Total Customer Profit": customer_profit,
+                    "Customer Revenue": customer_revenue
+                }])
+                st.session_state.swot_df = pd.concat([st.session_state.swot_df, new_row], ignore_index=True)
+                st.success(f"SWOT entry for **{competitor}** added!")
+                if auto_save:
+                    save_all_data()
+            else:
+                st.warning("Competitor Name is required.")
+
+    st.divider()
+    st.subheader("📋 All SWOT & Competitor Records")
+    if not st.session_state.swot_df.empty:
+        edited_swot = st.data_editor(st.session_state.swot_df, use_container_width=True, num_rows="dynamic", key="swot_editor")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save SWOT Changes", use_container_width=True):
+                st.session_state.swot_df = edited_swot.copy()
+                st.success("SWOT data updated!")
+                if auto_save:
+                    save_all_data()
+        with col2:
+            if st.button("🗑️ Clear All SWOT Data", type="secondary"):
+                st.session_state.swot_df = pd.DataFrame(columns=st.session_state.swot_df.columns)
+                st.rerun()
+
+        st.divider()
+        st.subheader("🔍 Detailed SWOT View")
+        if not st.session_state.swot_df.empty:
+            selected = st.selectbox("Select Competitor", st.session_state.swot_df["Competitor"].unique())
+            row = st.session_state.swot_df[st.session_state.swot_df["Competitor"] == selected].iloc[0]
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**🟢 Strengths**"); st.info(row["Strengths"] or "—")
+                st.markdown("**🔵 Opportunities**"); st.info(row["Opportunities"] or "—")
+            with col2:
+                st.markdown("**🔴 Weaknesses**"); st.warning(row["Weaknesses"] or "—")
+                st.markdown("**🟠 Threats**"); st.error(row["Threats"] or "—")
+            if row["Avoid Common Mistakes"]:
+                st.markdown("**⚠️ Common Mistakes to Avoid**")
+                st.write(row["Avoid Common Mistakes"])
+    else:
+        st.info("No SWOT entries yet.")
+
+# ====================== STRATEGIES ======================
 elif page == "🎯 Strategies":
-    # ... (keep original Strategies code)
+    st.header("🎯 Marketing Strategies")
+    st.caption("Build powerful, action-oriented marketing strategies")
 
+    st.subheader("Action-Oriented Strategy Starters")
+    action_words = ["coordinate", "improve", "plan", "execute", "complete", "develop", "restructure",
+                    "research", "investigate", "upgrade", "design", "acquire", "obtain", "quantify", "analyze"]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Recommended action words:**")
+        st.write(", ".join([f"`{word}`" for word in action_words]))
+
+    pricing_strategies = [
+        "highest market price", "price in the highest tier", "price in the middle market tier",
+        "price in the lowest market tier", "everyday low price", "zone pricing", "quantity pricing",
+        "segmented by time of purchase", "product bundling", "loyalty customer pricing",
+        "trial pricing", "price discounting", "trade dealing"
+    ]
+
+    with col2:
+        st.markdown("**Pricing Strategies:**")
+        for p in pricing_strategies:
+            st.write(f"• {p}")
+
+    st.divider()
+
+    st.subheader("🛠️ Strategy Builder")
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_action = st.selectbox("Action Word", action_words, index=0)
+    with col2:
+        selected_pricing = st.selectbox("Pricing Strategy", pricing_strategies, index=0)
+
+    objective = st.text_area("Strategy Objective / Description", placeholder="e.g., Increase market share in the premium segment by Q4", height=100)
+
+    if st.button("➕ Add Strategy to My List", use_container_width=True):
+        if objective.strip():
+            new_strategy = pd.DataFrame([{
+                "Action Verb": selected_action,
+                "Pricing Strategy": selected_pricing,
+                "Objective / Description": objective.strip(),
+                "Date Added": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+            }])
+            st.session_state.strategies_df = pd.concat([st.session_state.strategies_df, new_strategy], ignore_index=True)
+            st.success("Strategy added successfully!")
+            if auto_save:
+                save_all_data()
+        else:
+            st.warning("Please add a short objective/description.")
+
+    st.divider()
+    st.subheader("📋 My Saved Strategies")
+    if not st.session_state.strategies_df.empty:
+        edited_strategies = st.data_editor(st.session_state.strategies_df, use_container_width=True, num_rows="dynamic", key="strategies_editor")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save Changes to Strategies"):
+                st.session_state.strategies_df = edited_strategies.copy()
+                st.success("Strategies saved!")
+                if auto_save:
+                    save_all_data()
+        with col2:
+            if st.button("🗑️ Clear All Strategies", type="secondary"):
+                st.session_state.strategies_df = pd.DataFrame(columns=st.session_state.strategies_df.columns)
+                st.rerun()
+    else:
+        st.info("No strategies saved yet.")
+
+# ====================== ANALYTICS ======================
 elif page == "📈 Analytics":
     st.header("📈 Detailed Analytics")
-    st.info("Analytics coming soon...")
+    st.info("Analytics coming soon... (You can build charts here using the saved data)")
 
+# ====================== EXPORT ======================
 elif page == "📤 Export":
     st.header("📤 Export Data")
-    st.info("Use data editors on each page. Sidebar 'Save All Data' for full backup.")
+    st.info("You can export data from individual pages using the data editors. Use the sidebar 'Save All Data' button for full backup.")
 
 # ====================== GLOBAL SAVE BUTTON ======================
 st.sidebar.divider()
 if st.sidebar.button("💾 Save All Data Now", use_container_width=True, type="primary"):
     save_all_data()
 
-st.sidebar.caption("Marketing Dashboard v2 • All data persisted in /data folder")
+st.sidebar.caption("Marketing Dashboard v2 • Data is persisted in /data folder")
