@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 import os
+from io import BytesIO
+import zipfile
 
 # ====================== PAGE CONFIG ======================
 st.set_page_config(
@@ -200,7 +202,7 @@ elif page == "📝 Data Input":
             if auto_save:
                 save_all_data()
 
-# ====================== PROFILE (Single Column) ======================
+# ====================== PROFILE ======================
 elif page == "👤 Profile":
     st.header("👤 Customer Profile Data")
     st.caption("Build detailed customer personas for targeted marketing")
@@ -258,7 +260,7 @@ elif page == "👤 Profile":
     else:
         st.info("No profiles yet. Use the form above.")
 
-# ====================== AFFINITY (Single Column) ======================
+# ====================== AFFINITY ======================
 elif page == "❤️ Affinity":
     st.header("❤️ Customer Affinity & Affiliations")
     st.caption("Map schools, churches, clubs, and employers for hyper-targeted outreach")
@@ -315,7 +317,7 @@ elif page == "❤️ Affinity":
     else:
         st.info("No affinity records yet.")
 
-# ====================== LOCATION (Single Column) ======================
+# ====================== LOCATION ======================
 elif page == "📍 Location":
     st.header("📍 Customer Location & Classification")
     st.caption("Geographic and business classification for localized campaigns")
@@ -373,7 +375,7 @@ elif page == "📍 Location":
     else:
         st.info("No location records yet.")
 
-# ====================== CUSTOMER TYPE & ROLES (Single Column) ======================
+# ====================== CUSTOMER TYPE & ROLES ======================
 elif page == "🧑‍💼 Customer Type & Roles":
     st.header("🧑‍💼 Customer Type & Roles")
     st.caption("Classify customers as Consumer vs Business and identify key roles")
@@ -705,10 +707,106 @@ elif page == "📈 Analytics":
     st.header("📈 Detailed Analytics")
     st.info("Analytics coming soon... (You can build charts here using the saved data)")
 
-# ====================== EXPORT ======================
+# ====================== EXPORT (FULLY UPDATED) ======================
 elif page == "📤 Export":
-    st.header("📤 Export Data")
-    st.info("You can export data from individual pages using the data editors. Use the sidebar 'Save All Data' button for full backup.")
+    st.header("📤 Export All Data")
+    st.caption("Download all your marketing data as CSV files")
+
+    if st.button("💾 Save All Data First (Recommended)", type="primary"):
+        save_all_data()
+
+    st.divider()
+    st.subheader("📊 Download Individual Tables")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if not st.session_state.profile_df.empty:
+            csv_profiles = st.session_state.profile_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Profiles", csv_profiles, "profiles.csv", "text/csv", key="dl_profiles")
+        else:
+            st.info("No profile data")
+
+        if not st.session_state.affinity_df.empty:
+            csv_affinity = st.session_state.affinity_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Affinity", csv_affinity, "affinity.csv", "text/csv", key="dl_affinity")
+        else:
+            st.info("No affinity data")
+
+        if not st.session_state.location_df.empty:
+            csv_location = st.session_state.location_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Location", csv_location, "location.csv", "text/csv", key="dl_location")
+        else:
+            st.info("No location data")
+
+        if not st.session_state.customer_type_df.empty:
+            csv_ct = st.session_state.customer_type_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Customer Types & Roles", csv_ct, "customer_types.csv", "text/csv", key="dl_ct")
+        else:
+            st.info("No customer type data")
+
+    with col2:
+        if not st.session_state.leads_df.empty:
+            csv_leads = st.session_state.leads_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Leads", csv_leads, "leads.csv", "text/csv", key="dl_leads")
+        else:
+            st.info("No leads data")
+
+        if not st.session_state.lead_activities_df.empty:
+            csv_acts = st.session_state.lead_activities_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Lead Generation Activities", csv_acts, "lead_activities.csv", "text/csv", key="dl_acts")
+        else:
+            st.info("No activity data")
+
+        if not st.session_state.swot_df.empty:
+            csv_swot = st.session_state.swot_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 SWOT Analysis", csv_swot, "swot.csv", "text/csv", key="dl_swot")
+        else:
+            st.info("No SWOT data")
+
+        if not st.session_state.strategies_df.empty:
+            csv_strat = st.session_state.strategies_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Strategies", csv_strat, "strategies.csv", "text/csv", key="dl_strat")
+        else:
+            st.info("No strategies")
+
+        if not st.session_state.metrics_df.empty:
+            csv_metrics = st.session_state.metrics_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Metrics", csv_metrics, "metrics.csv", "text/csv", key="dl_metrics")
+        else:
+            st.info("No metrics")
+
+    st.divider()
+    st.subheader("📦 Download Everything as ZIP")
+
+    if st.button("Create Full Backup ZIP"):
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for df_name, df in [
+                ("profiles.csv", st.session_state.profile_df),
+                ("affinity.csv", st.session_state.affinity_df),
+                ("location.csv", st.session_state.location_df),
+                ("metrics.csv", st.session_state.metrics_df),
+                ("strategies.csv", st.session_state.strategies_df),
+                ("customer_types.csv", st.session_state.customer_type_df),
+                ("swot.csv", st.session_state.swot_df),
+                ("leads.csv", st.session_state.leads_df),
+                ("lead_activities.csv", st.session_state.lead_activities_df)
+            ]:
+                if not df.empty:
+                    zip_file.writestr(df_name, df.to_csv(index=False))
+
+            zip_file.writestr("company_name.txt", st.session_state.company_name)
+
+        zip_buffer.seek(0)
+        st.download_button(
+            label="📥 Download Full Backup (ZIP)",
+            data=zip_buffer,
+            file_name=f"marketing_dashboard_backup_{date.today()}.zip",
+            mime="application/zip"
+        )
+
+    st.info("💡 Tip: The 'Save All Data Now' button in the sidebar also creates the CSV files in the `data/` folder.")
 
 # ====================== GLOBAL SAVE BUTTON ======================
 st.sidebar.divider()
